@@ -1,29 +1,38 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { createReadStream, createWriteStream } from 'fs';
+import { createRequire } from 'module';
 import sax from 'sax';
+
+const require = createRequire(import.meta.url);
+const { name, version } = require('./package.json');
+
+function showVersion() {
+  console.log(`${name} v${version}`);
+}
 
 function showHelp() {
   console.log(`
-xml2rows - Stream convert large XML files to JSON/JSONL/CSV
+${name} v${version} - Stream convert large XML files to JSON/JSONL/CSV
 
 Usage: xml2rows <input.xml> [options]
 
 Options:
-  -o, --output <file>   Output file (default: stdout)
-  -r, --record <tag>    Record element to extract (e.g., "artist", "label")
+  -o, --output <file>   Output file (default: {root}.jsonl or {root}.csv)
+  -r, --record <tag>    Record element to extract (auto-detected if omitted)
   -f, --flatten         Flatten nested structures (auto-enabled for CSV)
   -n, --nested          Keep nested structure (default for JSON)
   -p, --pretty          Pretty print JSON output
   -c, --csv             Output as CSV instead of JSONL
   -m, --meta            Output root element metadata as first line
+  -v, --version         Show version number
   -h, --help            Show this help message
 
 Examples:
-  xml2rows artists.xml -r artist
-  xml2rows artists.xml -r artist -o artists.jsonl
-  xml2rows artists.xml -r artist -c -o artists.csv
-  xml2rows labels.xml -r label --flatten -o labels.jsonl
+  xml2rows artists.xml
+  xml2rows artists.xml -o artists.jsonl
+  xml2rows artists.xml -c -o artists.csv
+  xml2rows labels.xml --flatten -o labels.jsonl
 `);
 }
 
@@ -103,6 +112,9 @@ function parseArgs(args) {
     if (arg === '-h' || arg === '--help') {
       showHelp();
       process.exit(0);
+    } else if (arg === '-v' || arg === '--version') {
+      showVersion();
+      process.exit(0);
     } else if (arg === '-o' || arg === '--output') {
       options.output = args[++i];
     } else if (arg === '-r' || arg === '--record') {
@@ -134,9 +146,9 @@ function streamConvert(options) {
   return new Promise((resolve, reject) => {
     const parser = sax.createStream(true, { trim: true });
     const input = createReadStream(options.input);
-    const output = options.output
-      ? createWriteStream(options.output)
-      : process.stdout;
+
+    let output = null;
+    let outputPath = null;
 
     let recordCount = 0;
     let depth = 0;
@@ -147,11 +159,47 @@ function streamConvert(options) {
     let textBuffer = '';
     let rootEmitted = false;
 
+    // Auto-detection state
+    let rootName = null;
+    let recordLabel = null;  // Element name for progress output (e.g., "artist")
+
     // CSV state
     let csvColumns = null;
 
     parser.on('opentag', (node) => {
       depth++;
+
+      // Capture root element name and set up output
+      if (depth === 1) {
+        rootName = node.name;
+        if (options.record) {
+          recordLabel = options.record;
+        }
+
+        // Set up output file
+        if (options.output) {
+          outputPath = options.output;
+        } else {
+          const ext = options.csv ? 'csv' : 'jsonl';
+          outputPath = `${rootName}.${ext}`;
+        }
+        output = createWriteStream(outputPath);
+        process.stderr.write(`Output: ${outputPath}\n`);
+      }
+
+      // Auto-detect record element from first child of root
+      if (depth === 2 && !options.record) {
+        if (rootName.includes(node.name)) {
+          options.record = node.name;
+          recordLabel = node.name;
+          process.stderr.write(`Extracting <${node.name}> from <${rootName}>\n`);
+        } else {
+          console.error(`Error: Cannot auto-detect record element.`);
+          console.error(`Root <${rootName}> does not contain child <${node.name}>.`);
+          console.error(`Use -r <tag> to specify which element to extract.`);
+          process.exit(1);
+        }
+      }
 
       // Capture root element metadata if --meta is enabled
       if (options.meta && depth === 1 && !rootEmitted) {
@@ -260,7 +308,7 @@ function streamConvert(options) {
           recordCount++;
 
           if (recordCount % 10000 === 0) {
-            process.stderr.write(`\rProcessed ${recordCount.toLocaleString()} records...`);
+            process.stderr.write(`\rProcessed ${recordCount.toLocaleString()} ${recordLabel} rows...`);
           }
 
           inRecord = false;
@@ -305,10 +353,8 @@ function streamConvert(options) {
     });
 
     parser.on('end', () => {
-      if (options.output) {
-        output.end();
-      }
-      process.stderr.write(`\rProcessed ${recordCount.toLocaleString()} records total.\n`);
+      output.end();
+      process.stderr.write(`\rProcessed ${recordCount.toLocaleString()} ${recordLabel} rows total.\n`);
       resolve(recordCount);
     });
 
@@ -333,12 +379,6 @@ async function main() {
 
   if (!options.input) {
     console.error('Error: No input file specified');
-    process.exit(1);
-  }
-
-  if (!options.record) {
-    console.error('Error: No record element specified. Use -r <tag> to specify which element to extract.');
-    console.error('Example: xml2rows artists.xml -r artist');
     process.exit(1);
   }
 

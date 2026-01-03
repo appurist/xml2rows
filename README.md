@@ -5,26 +5,36 @@ A streaming command-line tool to convert large XML files to JSONL or CSV format.
 ## Installation
 
 ```bash
-pnpm install
+bun install
+```
+
+## Build Standalone Executable
+
+```bash
+bun run build    # Creates ./xml2rows
 ```
 
 ## Usage
 
 ```bash
-node index.js <input.xml> -r <record-tag> [options]
+bun index.js <input.xml> [options]
+
+# Or use the compiled executable
+./xml2rows <input.xml> [options]
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `-r, --record <tag>` | **Required.** The XML element name to extract as records (e.g., `artist`, `label`, `master`) |
-| `-o, --output <file>` | Output file path. Defaults to stdout |
+| `-r, --record <tag>` | Record element to extract (auto-detected from first child if omitted) |
+| `-o, --output <file>` | Output file path (default: `{root}.jsonl` or `{root}.csv`) |
 | `-c, --csv` | Output as CSV instead of JSONL. Automatically enables flattening |
 | `-f, --flatten` | Flatten nested structures using dot notation |
 | `-n, --nested` | Keep nested structure (default for JSON) |
 | `-p, --pretty` | Pretty print JSON output (one record per multiple lines) |
 | `-m, --meta` | Output root element attributes as first line (JSON) or comment (CSV) |
+| `-v, --version` | Show version number |
 | `-h, --help` | Show help message |
 
 ## Output Formats
@@ -59,25 +69,29 @@ Nested structures converted to dot notation, arrays as JSON strings:
 ## Examples
 
 ```bash
-# Convert artists XML to JSONL
-node index.js artists.xml -r artist -o artists.jsonl
+# Convert artists XML to JSONL (auto-detects <artist> from <artists>, outputs artists.jsonl)
+bun index.js artists.xml
 
-# Convert to CSV
-node index.js artists.xml -r artist -c -o artists.csv
+# Convert to CSV (outputs artists.csv)
+bun index.js artists.xml -c
 
-# Pretty print JSON to stdout
-node index.js labels.xml -r label -p | head -50
+# Specify output file
+bun index.js artists.xml -o /path/to/output.jsonl
 
 # Flattened JSONL
-node index.js masters.xml -r master -f -o masters-flat.jsonl
+bun index.js masters.xml -f
 
 # Include root element metadata
-node index.js data.xml -r item -m -o items.jsonl
+bun index.js data.xml -m
+
+# Explicit record element (when auto-detection won't work)
+bun index.js data.xml -r item
 ```
 
 ## Features
 
 - **Streaming**: Processes files of any size with constant memory usage
+- **Auto-Detection**: Automatically detects record element when child name is a substring of root (e.g., `<artist>` in `<artists>`)
 - **ID Promotion**: Automatically promotes `id` attributes to `id` fields (e.g., `<master id="123">` becomes `{"id":"123",...}`)
 - **Progress Reporting**: Shows progress every 10,000 records on stderr
 - **Proper Escaping**: CSV values with commas, quotes, or newlines are properly escaped

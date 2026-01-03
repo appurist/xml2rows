@@ -1,6 +1,6 @@
 {
   "name": "xml2rows",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Command-line tool to convert XML files to JSON/CSV rows",
   "type": "module",
   "main": "index.js",
@@ -8,7 +8,8 @@
     "xml2rows": "./index.js"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "bun index.js",
+    "build": "bun build index.js --compile --outfile xml2rows"
   },
   "keywords": [
     "xml",

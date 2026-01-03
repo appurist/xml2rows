@@ -1,2 +1,9 @@
 
 node_modules/
+
+*.jsonl
+*.json
+*.csv
+
+xml2rows
+xml2rows.exe

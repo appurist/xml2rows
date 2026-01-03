@@ -10,16 +10,19 @@ xml2rows is a streaming CLI tool that converts large XML files to JSONL or CSV f
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Run the tool
-node index.js <input.xml> -r <record-tag> [options]
+bun index.js <input.xml> -r <record-tag> [options]
+
+# Build standalone executable
+bun run build
 
 # Example: Convert Discogs artists to JSONL
-node index.js ../gigger/discogs-data/discogs_20260101_artists.xml -r artist -o artists.jsonl
+bun index.js ../gigger/discogs-data/discogs_20260101_artists.xml -r artist -o artists.jsonl
 
 # Example: Convert to CSV
-node index.js ../gigger/discogs-data/discogs_20260101_masters.xml -r master -c -o masters.csv
+bun index.js ../gigger/discogs-data/discogs_20260101_masters.xml -r master -c -o masters.csv
 ```
 
 ## Architecture
@@ -39,6 +42,6 @@ Single-file CLI tool (`index.js`) using the `sax` streaming XML parser. Key func
 
 ## User Preferences
 
-- Use `pnpm` (not npm)
-- Use JavaScript/Node (not Python)
+- Use `bun` as the runtime and package manager
+- Use JavaScript (not Python)
 - Don't commit to git unless explicitly asked
