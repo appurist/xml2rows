@@ -392,9 +392,13 @@ function streamConvert(options) {
     });
 
     parser.on('end', () => {
-      output.end();
       process.stderr.write(`\rProcessed ${recordCount.toLocaleString()} ${recordLabel} rows total.\n`);
-      resolve(recordCount);
+      process.stderr.write(`Flushing output to file... (please wait)\n`);
+      output.end();
+      output.on('finish', () => {
+        process.stderr.write(`Output complete.\n`);
+        resolve(recordCount);
+      });
     });
 
     input.on('error', (err) => {

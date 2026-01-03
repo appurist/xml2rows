@@ -1,6 +1,6 @@
 {
   "name": "xml2rows",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Command-line tool to convert XML files to JSON/CSV rows",
   "type": "module",
   "main": "index.js",
