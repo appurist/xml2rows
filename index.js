@@ -2,11 +2,8 @@
 
 import { createReadStream, createWriteStream } from 'fs';
 import { basename } from 'path';
-import { createRequire } from 'module';
 import sax from 'sax';
-
-const require = createRequire(import.meta.url);
-const { name, version } = require('./package.json');
+import { name, version } from './package.json';
 
 function showVersion() {
   console.log(`${name} v${version}`);
