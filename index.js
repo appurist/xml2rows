@@ -422,6 +422,8 @@ async function main() {
     process.exit(1);
   }
 
+  process.stderr.write(`${name} v${version}\n`);
+
   try {
     await streamConvert(options);
   } catch (err) {
