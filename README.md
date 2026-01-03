@@ -28,8 +28,9 @@ bun index.js <input.xml> [options]
 | Option | Description |
 |--------|-------------|
 | `-r, --record <tag>` | Record element to extract (auto-detected from first child if omitted) |
-| `-o, --output <file>` | Output file path (default: `{root}.jsonl` or `{root}.csv`) |
+| `-o, --output <file>` | Output file path (default: `{basename}.jsonl` or `{basename}.csv`) |
 | `-c, --csv` | Output as CSV instead of JSONL. Automatically enables flattening |
+| `-C, --camel` | Convert snake_case keys to camelCase |
 | `-f, --flatten` | Flatten nested structures using dot notation |
 | `-n, --nested` | Keep nested structure (default for JSON) |
 | `-p, --pretty` | Pretty print JSON output (one record per multiple lines) |
@@ -83,6 +84,9 @@ bun index.js masters.xml -f
 
 # Include root element metadata
 bun index.js data.xml -m
+
+# Convert keys to camelCase (data_quality → dataQuality)
+bun index.js artists.xml -C
 
 # Explicit record element (when auto-detection won't work)
 bun index.js data.xml -r item

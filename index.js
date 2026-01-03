@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { createReadStream, createWriteStream } from 'fs';
+import { basename } from 'path';
 import { createRequire } from 'module';
 import sax from 'sax';
 
@@ -18,12 +19,13 @@ ${name} v${version} - Stream convert large XML files to JSON/JSONL/CSV
 Usage: xml2rows <input.xml> [options]
 
 Options:
-  -o, --output <file>   Output file (default: {root}.jsonl or {root}.csv)
+  -o, --output <file>   Output file (default: {basename}.jsonl or {basename}.csv)
   -r, --record <tag>    Record element to extract (auto-detected if omitted)
   -f, --flatten         Flatten nested structures (auto-enabled for CSV)
   -n, --nested          Keep nested structure (default for JSON)
   -p, --pretty          Pretty print JSON output
   -c, --csv             Output as CSV instead of JSONL
+  -C, --camel           Convert snake_case keys to camelCase
   -m, --meta            Output root element metadata as first line
   -v, --version         Show version number
   -h, --help            Show this help message
@@ -69,6 +71,36 @@ function promoteId(obj) {
   return obj;
 }
 
+// Convert snake_case to camelCase
+function snakeToCamel(str) {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+// Recursively convert all keys in an object to camelCase
+function camelCaseKeys(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => camelCaseKeys(item));
+  }
+
+  const result = {};
+  for (const key of Object.keys(obj)) {
+    const camelKey = snakeToCamel(key);
+    const value = obj[key];
+    if (Array.isArray(value)) {
+      result[camelKey] = value.map(item =>
+        typeof item === 'object' && item !== null ? camelCaseKeys(item) : item
+      );
+    } else if (typeof value === 'object' && value !== null) {
+      result[camelKey] = camelCaseKeys(value);
+    } else {
+      result[camelKey] = value;
+    }
+  }
+  return result;
+}
+
 function flatten(obj, prefix = '', result = {}) {
   for (const key in obj) {
     const value = obj[key];
@@ -103,7 +135,8 @@ function parseArgs(args) {
     flatten: false,
     pretty: false,
     csv: false,
-    meta: false
+    meta: false,
+    camel: false
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -129,6 +162,8 @@ function parseArgs(args) {
       options.csv = true;
     } else if (arg === '-m' || arg === '--meta') {
       options.meta = true;
+    } else if (arg === '-C' || arg === '--camel') {
+      options.camel = true;
     } else if (!arg.startsWith('-')) {
       options.input = arg;
     }
@@ -181,7 +216,8 @@ function streamConvert(options) {
           outputPath = options.output;
         } else {
           const ext = options.csv ? 'csv' : 'jsonl';
-          outputPath = `${rootName}.${ext}`;
+          const inputBasename = basename(options.input).replace(/\.[^.]+$/, '');
+          outputPath = `${inputBasename}.${ext}`;
         }
         output = createWriteStream(outputPath);
         process.stderr.write(`Output: ${outputPath}\n`);
@@ -283,6 +319,9 @@ function streamConvert(options) {
           // Emit the completed record
           let record = currentRecord;
           promoteId(record);
+          if (options.camel) {
+            record = camelCaseKeys(record);
+          }
           if (options.flatten) {
             record = flatten(record);
           }
