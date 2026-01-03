@@ -1,0 +1,25 @@
+{
+  "name": "xml2rows",
+  "version": "1.0.0",
+  "description": "Command-line tool to convert XML files to JSON/CSV rows",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "xml2rows": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "xml",
+    "json",
+    "jsonl",
+    "csv",
+    "converter",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "sax": "^1.4.3"
+  }
+}
