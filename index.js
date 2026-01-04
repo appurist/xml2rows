@@ -335,9 +335,12 @@ function streamConvert(options) {
             output.write(row.join(',') + '\n');
           } else {
             // JSON output
-            const json = options.pretty
+            let json = options.pretty
               ? JSON.stringify(record, null, 2)
               : JSON.stringify(record);
+            // Escape U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR)
+            // These are valid in JSON but cause issues with line-based readers
+            json = json.replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
             output.write(json + '\n');
           }
 
