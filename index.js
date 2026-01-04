@@ -350,6 +350,16 @@ function streamConvert(options) {
             process.stderr.write(`\rProcessed ${recordCount.toLocaleString()} ${recordLabel} rows...`);
           }
 
+          // Periodic flush every 100K rows to reduce final flush time
+          if (recordCount % 100000 === 0) {
+            input.pause();
+            output.once('drain', () => input.resume());
+            // If buffer isn't full, resume immediately
+            if (output.writableLength < output.writableHighWaterMark) {
+              input.resume();
+            }
+          }
+
           inRecord = false;
           currentRecord = null;
           stack = [];
